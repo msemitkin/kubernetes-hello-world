@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+  labels:
+    app: mongo
+# deployment specific configuration
+spec:
+  replicas: 1
+  selector:
+    # this label is used by deployment to identify which pods actually belong to it 
+    matchLabels:
+      app: mongo
+  # configuration of pod
+  template: 
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      # list of containers, mostly one app per pod
+      containers:
+      # container name 
+      - name: mongodb
+        image: mongo:5.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-user
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-password
+        - name: DB_URL
+          valueFrom:
+            configMapKeyRef:
+              name: mongo-config
+              key: mongo-url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # name of the 'endpoint' which will be used to access mongo
+  name: mongo-service
+spec:
+  # How does service know which pods belong to it and which pods it should send requests to? Using selector. Should match the label of the pods
+  selector:
+    app: mongo
+  ports:
+    - protocol: TCP
+      # port at which service will be accessible within the cluster. Common standard to keep port the same as target port to keep things simple
+      port: 27017 
+      # ports of the pods, that belong to the service
+      targetPort: 27017
